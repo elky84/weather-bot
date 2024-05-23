@@ -1,0 +1,35 @@
+name: Weather and Air Pollution Report
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # 매 30분마다 실행
+  workflow_dispatch: # 수동 실행 가능하게 추가
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Script
+        run: node index.js
+        env:
+          KMA_WEATHER_SERVICE_KEY: ${{ secrets.KMA_WEATHER_SERVICE_KEY }}
+          STATION_NAME: ${{ secrets.STATION_NAME }}
+          STATE_NAME: ${{ secrets.STATE_NAME }}
+          KMA_AIR_SERVICE_KEY: ${{ secrets.KMA_AIR_SERVICE_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          NX: ${{ secrets.NX }}
+          NY: ${{ secrets.NY }}
+
+      - name: Complete Workflow
+        run: echo "Weather and Air Pollution report completed"
