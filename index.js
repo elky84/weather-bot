@@ -1,4 +1,5 @@
 const axios = require('axios');
+const moment = require('moment');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -12,17 +13,21 @@ const KMA_AIR_SERVICE_KEY = process.env.KMA_AIR_SERVICE_KEY;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 const LOCATION_COORDINATES = { nx: process.env.NX, ny: process.env.NY };
 
-async function getWeather() {
-  const url = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${KMA_WEATHER_SERVICE_KEY}&pageNo=1&numOfRows=100&dataType=JSON&base_date=${getBaseDate()}&base_time=${toBaseTime(new Date())}&nx=${LOCATION_COORDINATES.nx}&ny=${LOCATION_COORDINATES.ny}`;
+async function getWeather(baseTime) {
+  const url = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${KMA_WEATHER_SERVICE_KEY}&pageNo=1&numOfRows=100&dataType=JSON&base_date=${getBaseDate()}&base_time=${toBaseTime(baseTime)}&nx=${LOCATION_COORDINATES.nx}&ny=${LOCATION_COORDINATES.ny}`;
   const response = await axios.get(url);
-  return response.data.response.body.items.item;
+  if(response.data.response.header.resultCode == '03') {
+    baseTime.setHours(baseTime.getHours() - 1); // 시간 감소
+    return getWeather(baseTime);
+}
+return response.data.response.body.items.item;
 }
 
 async function getUltraSrtFcst(baseTime) {
     const url = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst?serviceKey=${KMA_WEATHER_SERVICE_KEY}&pageNo=1&numOfRows=100&dataType=JSON&base_date=${getToday()}&base_time=${toBaseTime(baseTime)}&nx=${LOCATION_COORDINATES.nx}&ny=${LOCATION_COORDINATES.ny}`;
     const response = await axios.get(url);
     if(response.data.response.header.resultCode == '03') {
-        baseTime.setHour(baseTime.getHour() - 1);
+        baseTime.setHours(baseTime.getHours() - 1); // 시간 감소
         return getUltraSrtFcst(baseTime);
     }
 
@@ -36,26 +41,15 @@ async function getAirPollution() {
 }
 
 function getToday() {
-    const date = new Date();
-    date.setDate(date.getDate()); 
-    const year = date.getFullYear();
-    const month = (`0${date.getMonth() + 1}`).slice(-2);
-    const day = (`0${date.getDate()}`).slice(-2);
-    return `${year}${month}${day}`;
-  }
-  
+  return moment().format('YYYYMMDD');
+}
 
 function getBaseDate() {
-  const date = new Date();
-  date.setDate(date.getDate() - 1);
-  const year = date.getFullYear();
-  const month = (`0${date.getMonth() + 1}`).slice(-2);
-  const day = (`0${date.getDate()}`).slice(-2);
-  return `${year}${month}${day}`;
+  return moment().subtract(1, 'days').format('YYYYMMDD');
 }
 
 function toBaseTime(date) {
-    return `${date.getHours().toString().padStart(2, '0')}00`;
+  return moment(date).subtract(9, 'hours').format('HH00'); // KST로 변환하여 반환
 }
 
 async function sendToSlack(message) {
@@ -67,44 +61,44 @@ async function sendToSlack(message) {
 }
 
 function convertWeatherDescription(ptyValue) {
-    switch (ptyValue) {
-        case '0':
-            return "강수 없음";
-        case '1':
-            return "비";
-        case '2':
-            return "비/눈";
-        case '3':
-            return "눈";
-        case '5':
-            return "빗방울";
-        case '6':
-            return "빗방울눈날림";
-        case '7':
-            return "눈날림";
-        default:
-            return "알 수 없음";
-    }
+  switch (ptyValue) {
+      case '0':
+          return "강수 없음";
+      case '1':
+          return "비";
+      case '2':
+          return "비/눈";
+      case '3':
+          return "눈";
+      case '5':
+          return "빗방울";
+      case '6':
+          return "빗방울눈날림";
+      case '7':
+          return "눈날림";
+      default:
+          return "알 수 없음";
+  }
 }
 
 function interpretAirQuality(pmValue) {
-    if (pmValue == '-') {
-        return '알 수 없음';
-    }
-    else if (pmValue <= 30) {
-        return '좋음';
-    } else if (pmValue <= 80) {
-        return '보통';
-    } else {
-        return '나쁨';
-    }
+  if (pmValue == '-') {
+      return '알 수 없음';
+  }
+  else if (pmValue <= 30) {
+      return '좋음';
+  } else if (pmValue <= 80) {
+      return '보통';
+  } else {
+      return '나쁨';
+  }
 }
 
 (async () => {
   try {
-    const weatherData = await getWeather();
-    const airPollutionData = await getAirPollution();
+    const weatherData = await getWeather(new Date);
     const ultraSrtNcst = await getUltraSrtFcst(new Date);
+    const airPollutionData = await getAirPollution();
 
     const temperature = ultraSrtNcst.find(item => item.category === 'T1H').fcstValue;
     const humidity = ultraSrtNcst.find(item => item.category === 'REH').fcstValue;
