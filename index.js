@@ -96,13 +96,16 @@ function interpretAirQuality(pmValue) {
 
 (async () => {
   try {
-    const weatherData = await getWeather(new Date);
-    const ultraSrtNcst = await getUltraSrtFcst(new Date);
+    var ultraSrtNcst = await getUltraSrtFcst(new Date);
+    if(ultraSrtNcst == null) {
+      ultraSrtNcst = await getWeather(new Date);
+    }
+
     const airPollutionData = await getAirPollution();
 
     const temperature = ultraSrtNcst.find(item => item.category === 'T1H').fcstValue;
     const humidity = ultraSrtNcst.find(item => item.category === 'REH').fcstValue;
-    const weatherDescription = convertWeatherDescription(weatherData.find(item => item.category === 'PTY').fcstValue);
+    const weatherDescription = convertWeatherDescription(ultraSrtNcst.find(item => item.category === 'PTY').fcstValue);
 
     const pm10 = airPollutionData[0].pm10Value;
     const pm2_5 = airPollutionData[0].pm25Value;
