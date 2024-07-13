@@ -1,8 +1,8 @@
 name: Weather and Air Pollution Report
 
 on:
-  schedule:
-    - cron: '*/30 * * * *' # 매 30분마다 실행
+  # schedule:
+  #   - cron: '*/30 * * * *' # 매 30분마다 실행
   workflow_dispatch: # 수동 실행 가능하게 추가
 
 jobs:
