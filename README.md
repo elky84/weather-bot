@@ -10,7 +10,7 @@
 ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/elky84/weather-bot.svg)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/elky84/weather-bot.svg)
 
-# weather_bot
+# weather-bot
 
 기상청 API를 이용한 날씨/미세먼지 정보를 슬랙으로 전달하는 봇입니다
 
